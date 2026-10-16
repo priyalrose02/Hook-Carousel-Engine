@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hook & Carousel Engine</title>
+<style>
+:root{--bg:#faf7f2;--card:#fff;--ink:#1c1917;--mute:#78716c;--line:#e7e1d8;--acc:#e1306c;--acc2:#f58529;--chip:#f3eee6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14110f;--card:#1f1b18;--ink:#f5f1ea;--mute:#a8a29e;--line:#34302b;--chip:#2a2521;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14110f;--card:#1f1b18;--ink:#f5f1ea;--mute:#a8a29e;--line:#34302b;--chip:#2a2521;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;margin:4px 0 4px;letter-spacing:-.02em}
+h1 span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mute);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer;font:inherit}
+.tab.on{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff;border-color:transparent}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:130px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1;min-width:150px}
+button.go{margin-top:14px;width:100%;padding:13px;border:0;border-radius:12px;font:600 16px inherit;font-family:inherit;color:#fff;cursor:pointer;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+button.go:disabled{opacity:.5;cursor:wait}
+button.sm{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:8px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
+.mic{margin-top:8px}.mic.rec{background:var(--acc);color:#fff;border-color:transparent}
+.note{font-size:12px;color:var(--mute);margin-top:6px}
+.err{color:#dc2626;margin-top:10px}
+h2{font-size:17px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hook{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.hook:first-of-type{border-top:0}
+.n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--chip);display:grid;place-items:center;font-size:12px;font-weight:700}
+.tag{display:inline-block;font-size:11px;background:var(--chip);border-radius:6px;padding:1px 7px;color:var(--mute);margin-top:3px}
+.slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.slide{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg);position:relative}
+.slide b{display:block;margin:2px 0 6px}
+.slide small{display:block;color:var(--mute);margin-top:8px}
+.badge{font-size:11px;color:var(--acc);font-weight:700}
+.dm{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--bg)}
+.dm p{margin:6px 0;white-space:pre-wrap}
+.kw{font-weight:700;color:var(--acc)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.spin{text-align:center;color:var(--mute);padding:24px}
+.table-wrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Hook &amp; Carousel <span>Engine</span></h1>
+  <p class="sub">One video or voice note in. 5 hooks, a 7-slide carousel and ManyChat DM flows out.</p>
+
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-m="yt">YouTube</button>
+      <button class="tab" data-m="voice">Voice note</button>
+      <button class="tab" data-m="text">Idea / text</button>
+    </div>
+
+    <div id="p-yt">
+      <label>YouTube URL (for reference)</label>
+      <input id="url" placeholder="https://youtube.com/watch?v=...">
+      <label>Transcript (paste it here)</label>
+      <textarea id="tr" placeholder="On YouTube: ... menu → Show transcript → copy. Paste here."></textarea>
+      <div class="note">This page can't download from YouTube itself, so paste the transcript. A short summary of the video works too.</div>
+    </div>
+    <div id="p-voice" hidden>
+      <button class="sm mic" id="mic">🎙 Start recording</button>
+      <label>Transcribed voice note (editable)</label>
+      <textarea id="vt" placeholder="Tap record and talk through your idea, or type here."></textarea>
+      <div class="note" id="micnote">Uses your browser's speech recognition (best in Chrome/Safari).</div>
+    </div>
+    <div id="p-text" hidden>
+      <label>Your idea, post or notes</label>
+      <textarea id="tx" placeholder="e.g. How I got my first 10 clients without ads"></textarea>
+    </div>
+
+    <div class="row">
+      <div><label>Niche / audience</label><input id="niche" placeholder="e.g. fitness coaches"></div>
+      <div><label>Tone</label>
+        <select id="tone"><option>Bold &amp; punchy</option><option>Friendly &amp; casual</option><option>Expert &amp; authoritative</option><option>Funny &amp; witty</option></select></div>
+      <div><label>Lead magnet / offer (for DMs)</label><input id="offer" placeholder="e.g. free 7-day meal plan"></div>
+    </div>
+    <button class="go" id="go">Generate content pack</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="out"></div>
+</div>
+
+<script>
+(function(){
+var mode='yt',data=null,$=function(i){return document.getElementById(i)};
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+
+document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){
+  mode=b.dataset.m;
+  document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('on',x===b)});
+  ['yt','voice','text'].forEach(function(m){$('p-'+m).hidden=m!==mode});
+}});
+
+/* Voice note */
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,on=false,base='';
+if(!SR){$('mic').disabled=true;$('micnote').textContent='Speech recognition isn\'t supported in this browser. Type or paste your note instead.'}
+$('mic').onclick=function(){
+  if(!SR)return;
+  if(on){rec.stop();return}
+  try{
+    rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang=navigator.language||'en-US';
+    base=$('vt').value?$('vt').value+' ':'';
+    rec.onresult=function(e){var t='';for(var i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;$('vt').value=base+t};
+    rec.onend=function(){on=false;$('mic').classList.remove('rec');$('mic').textContent='🎙 Start recording'};
+    rec.onerror=function(e){$('micnote').textContent='Mic error: '+e.error+'. You can type instead.'};
+    rec.start();on=true;$('mic').classList.add('rec');$('mic').textContent='⏹ Stop recording';
+  }catch(e){$('micnote').textContent='Could not start the mic.'}
+};
+
+function source(){
+  if(mode==='yt')return ($('tr').value.trim()||'')+($('url').value.trim()?'\n(Source video: '+$('url').value.trim()+')':'');
+  if(mode==='voice')return $('vt').value.trim();
+  return $('tx').value.trim();
+}
+
+var PROMPT=function(src){return 'You are an elite Instagram growth copywriter. From the source material below, produce a content pack.\n'+
+'Niche/audience: '+($('niche').value||'general creators')+'\nTone: '+$('tone').value+'\nOffer / lead magnet for DMs: '+($('offer').value||'a free resource related to the topic')+'\n\n'+
+'Rules: hooks must be under 14 words, each using a DIFFERENT proven angle (e.g. contrarian, curiosity gap, specific number, mistake, story, bold promise). Carousel is exactly 7 slides: slide 1 = cover hook, slides 2-6 deliver value (one idea per slide, max 25 words), slide 7 = CTA telling people to comment a KEYWORD. Be concrete, not generic. Do not invent statistics.\n'+
+'Return ONLY valid JSON, no markdown fences, in this shape:\n'+
+'{"topic":"",\n"hooks":[{"text":"","angle":""}] (exactly 5),\n"slides":[{"title":"","body":"","visual":"short design suggestion"}] (exactly 7),\n"caption":"IG caption with CTA and 5 hashtags",\n"manychat":{"keyword":"ONE WORD UPPERCASE","comment_replies":["3 short public reply variations"],"opening_dm":"","follow_gate":"message asking them to follow then tap a button","delivery_dm":"message delivering the offer","nurture_dm":"follow-up sent 24h later","story_reply_dm":"auto-reply for story mentions"}}\n\nSOURCE MATERIAL:\n'+src.slice(0,12000)};
+
+$('go').onclick=async function(){
+  $('err').textContent='';
+  var src=source();
+  if(src.length<15){$('err').textContent='Add a transcript, voice note or idea first.';return}
+  var btn=$('go');btn.disabled=true;btn.textContent='Generating…';
+  $('out').innerHTML='<div class="card spin">Writing hooks, slides and DM flows…</div>';
+  try{
+    var sample=await claude.use('sample');
+    if(!sample)throw {message:'AI generation isn\'t available in this view. Open the page in claude.ai while signed in.'};
+    var r=await sample.json(PROMPT(src),{modelTier:'default',cache:false});
+    if(typeof r==='string'){r=JSON.parse(r.replace(/```json|```/g,'').trim())}
+    data=r;render();
+  }catch(e){
+    $('out').innerHTML='';
+    $('err').textContent=(e&&e.code==='not_granted')?'Permission to use Claude was declined.':(e&&e.code==='rate_limited')?'Rate limited. Wait a moment and try again.':'Something went wrong: '+((e&&e.message)||'try again')+'.';
+  }
+  btn.disabled=false;btn.textContent='Generate content pack';
+};
+
+function cp(text,b){
+  var done=function(){var o=b.textContent;b.textContent='Copied';setTimeout(function(){b.textContent=o},1200)};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,fallback)}else fallback();
+  function fallback(){var t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');done()}catch(e){}t.remove()}
+}
+
+function allText(){
+  var d=data,m=d.manychat||{},s='HOOKS\n'+(d.hooks||[]).map(function(h,i){return (i+1)+'. '+h.text+' ['+h.angle+']'}).join('\n');
+  s+='\n\nCAROUSEL\n'+(d.slides||[]).map(function(x,i){return 'Slide '+(i+1)+': '+x.title+'\n'+x.body+'\n(Visual: '+x.visual+')'}).join('\n\n');
+  s+='\n\nCAPTION\n'+d.caption+'\n\nMANYCHAT (keyword: '+m.keyword+')\nComment replies:\n- '+(m.comment_replies||[]).join('\n- ');
+  s+='\n\nOpening DM:\n'+m.opening_dm+'\n\nFollow gate:\n'+m.follow_gate+'\n\nDelivery DM:\n'+m.delivery_dm+'\n\nNurture DM (24h):\n'+m.nurture_dm+'\n\nStory reply DM:\n'+m.story_reply_dm;
+  return s;
+}
+
+function render(){
+  var d=data,m=d.manychat||{},h='';
+  h+='<div class="card"><h2>🎣 5 Hooks <button class="sm" data-c="hooks">Copy all</button></h2>';
+  (d.hooks||[]).forEach(function(x,i){h+='<div class="hook"><div class="n">'+(i+1)+'</div><div style="flex:1"><div>'+esc(x.text)+'</div><span class="tag">'+esc(x.angle)+'</span></div><button class="sm" data-h="'+i+'">Copy</button></div>'});
+  h+='</div><div class="card"><h2>📱 7-Slide Carousel <button class="sm" data-c="slides">Copy all</button></h2><div class="slides">';
+  (d.slides||[]).forEach(function(x,i){h+='<div class="slide"><span class="badge">SLIDE '+(i+1)+'</span><b>'+esc(x.title)+'</b><div>'+esc(x.body)+'</div><small>🎨 '+esc(x.visual)+'</small></div>'});
+  h+='</div><h2 style="margin-top:14px">Caption <button class="sm" data-c="cap">Copy</button></h2><div style="white-space:pre-wrap">'+esc(d.caption)+'</div></div>';
+  h+='<div class="card"><h2>💬 ManyChat DM Flow <button class="sm" data-c="dm">Copy all</button></h2>'+
+  '<p>Trigger keyword: <span class="kw">'+esc(m.keyword)+'</span> <span class="note">(set as a comment trigger on this post in ManyChat)</span></p>'+
+  '<div class="dm"><b>Public comment replies (rotate)</b>'+(m.comment_replies||[]).map(function(r){return '<p>• '+esc(r)+'</p>'}).join('')+'</div>'+
+  [['1. Opening DM',m.opening_dm],['2. Follow gate',m.follow_gate],['3. Delivery',m.delivery_dm],['4. Nurture (24h later)',m.nurture_dm],['Story reply auto-DM',m.story_reply_dm]].map(function(p){return '<div class="dm"><b>'+p[0]+'</b><p>'+esc(p[1])+'</p></div>'}).join('')+'</div>';
+  h+='<div class="actions"><button class="sm" id="dl">⬇ Download all (.txt)</button><button class="sm" id="re">↻ Regenerate</button></div>';
+  $('out').innerHTML=h;
+
+  $('out').querySelectorAll('[data-h]').forEach(function(b){b.onclick=function(){cp(d.hooks[b.dataset.h].text,b)}});
+  $('out').querySelectorAll('[data-c]').forEach(function(b){b.onclick=function(){
+    var k=b.dataset.c,t='';
+    if(k==='hooks')t=d.hooks.map(function(x,i){return (i+1)+'. '+x.text}).join('\n');
+    else if(k==='slides')t=d.slides.map(function(x,i){return 'Slide '+(i+1)+': '+x.title+'\n'+x.body}).join('\n\n');
+    else if(k==='cap')t=d.caption;
+    else t=[m.opening_dm,m.follow_gate,m.delivery_dm,m.nurture_dm,m.story_reply_dm].join('\n\n');
+    cp(t,b)}});
+  $('re').onclick=function(){$('go').click()};
+  $('dl').onclick=async function(){
+    try{var dl=await claude.use('downloads');
+      if(!dl){cp(allText(),$('dl'));$('dl').textContent='Copied (downloads unavailable)';return}
+      await dl.save({filename:'content-pack.txt',data:allText()});
+    }catch(e){}
+  };
+}
+})();
+</script>
+</body>
+</html>
